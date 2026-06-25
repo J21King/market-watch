@@ -11,7 +11,7 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 TICKERS = ["AAPL", "NVDA", "TSLA"]
 
 def get_market_news(ticker):
-    url = f"https://finnhub.io{ticker}&from=2026-01-01&to=2026-12-31&token={FINNHUB_KEY}"
+    url = f"https://finnhub.io{ticker}&from=2026-06-01&to=2026-06-25&token={FINNHUB_KEY}"
     response = requests.get(url).json()
     return response[:3] # Analyze top 3 latest articles
 

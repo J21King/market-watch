@@ -1,0 +1,31 @@
+name: Run Stock News AI Tracker
+
+on:
+  schedule:
+    # Runs every 30 minutes (GitHub Actions schedules can sometimes be slightly delayed)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # Allows you to run it manually via the GitHub dashboard button
+
+jobs:
+  run-tracker:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+
+    - name: Set Up Python Runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Project Dependencies
+      run: pip install requests
+
+    - name: Execute Python Tracker Script
+      env:
+        FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: python script.py
+
