@@ -8,11 +8,21 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 # 2. Config - Add tickers you care about
-TICKERS = ["AAPL", "NVDA", "TSLA"]
+TICKERS = ["MSFT", "NVDA", "TSLA"]
 
 def get_market_news(ticker):
-    url = f"https://finnhub.io{ticker}&from=2026-06-01&to=2026-06-25&token={FINNHUB_KEY}"
-    response = requests.get(url).json()
+    # Base URL
+    url = "https://finnhub.io"
+    
+    query_params = {
+        "symbol": ticker,
+        "from": "2026-06-01",
+        "to": "2026-06-25",
+        "token": FINNHUB_KEY
+    }
+    
+    # Requests cleanly merges these together into a legal URL string
+    response = requests.get(url, params=query_params).json()
     return response[:3] # Analyze top 3 latest articles
 
 def analyze_sentiment(headline):
