@@ -4,14 +4,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 1. Load Secrets from Environment Variables
+# Load secrets from env variables
 FINNHUB_KEY = os.environ["FINNHUB_API_KEY"]
 GROQ_KEY = os.environ["GROQ_API_KEY"]
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-# 2. Config - Add tickers you care about
-TICKERS = ["MSFT", "AMZN"]
+# Config - Tickers to be analyzed
+TICKERS = ["MSFT", "AMZN", "AAPL", "GOOGL", "TSLA"]
 
 def get_market_news(ticker):
     # Base URL
@@ -24,10 +24,9 @@ def get_market_news(ticker):
         "token": FINNHUB_KEY
     }
     
-    # Requests cleanly merges these together into a legal URL string
     response = requests.get(url, params=query_params).json()
     print(f"Successfully fetched news for {ticker}")
-    return response[:3] # Analyze top 3 latest articles
+    return response[:3] # Return top 3 latest articles to analyze
 
 def analyze_sentiment(headline):
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -39,10 +38,8 @@ def analyze_sentiment(headline):
     }
     try:
         response = requests.post(url, json=data, headers=headers).json()
-        print("Successfully analyzed sentiment.")  # Debugging line to see the full response
         return response["choices"][0]["message"]["content"]
     except:
-        print("Failed to analyze sentiment. Check API response.")
         return "Score: 0, Reason: Analysis failed."
 
 def send_telegram(message):
