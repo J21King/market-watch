@@ -12,7 +12,8 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 # Config - Tickers to be analyzed
-TICKERS = ["MSFT", "AMZN", "GOOGL", "TSLA", "AVGO", "NVDA"]
+# TICKERS = ["MSFT", "AMZN", "GOOGL", "TSLA", "AVGO", "NVDA"]
+TICKERS = ["MSFT"]
 
 class MarketWatch:
     TODAY = datetime.now(timezone.utc).date().isoformat()
@@ -40,10 +41,13 @@ class MarketWatch:
 
     @classmethod
     def get_insider_transactions(cls, ticker):
-        url = f"https://finnhub.io/api/v1/stock/insider-transactions"
+        url = f"https://finnhub.io/api/v1/stock/insider-transactions?"
 
         query_params = {
             "symbol": ticker,
+            # "from": cls.YESTERDAY,
+            "from": "2026-06-10",  # Fetch from the start of the year for more data
+            "to": cls.TODAY,
             "token": FINNHUB_KEY
         }
 
@@ -54,7 +58,7 @@ class MarketWatch:
             return []
 
         print(f"Successfully fetched insider transactions for {ticker}")
-        return response.get("data", [])[:5]  # Return top 5 latest transactions
+        return response.get("data", [])
 
 
 def analyze_sentiment(headline, summary):
@@ -74,13 +78,27 @@ def analyze_sentiment(headline, summary):
 
 def format_datetime_pst(timestamp):
     pst = timezone(timedelta(hours=-8))
-    return datetime.fromtimestamp(timestamp, pst).strftime("%Y-%m-%d %I:%M %p PST")
+    return datetime.fromtimestamp(timestamp, pst).strftime("%Y-%m-%d  %I:%M %p PST")
+
+
+def sort_change_value(value):
+    try:
+        return abs(float(value))
+    except (TypeError, ValueError):
+        return float("-inf")
 
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = {
+        "chat_id": TELEGRAM_CHAT_ID, 
+        "text": message,
+        "link_preview_options": {
+            "is_disabled": True
+        }
+    }
     try:
-        response = requests.post(url=url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message}).json()
+        response = requests.post(url=url, json=data).json()
         if not response.get("ok"):
             print(f"Telegram rejected the message. Error details: {response}")
     except Exception as e:
@@ -90,7 +108,9 @@ def send_telegram(message):
 # Main Logic Run
 for ticker in TICKERS:
     articles = MarketWatch.get_market_news(ticker)
+    insider_txs = MarketWatch.get_insider_transactions(ticker)
     alerts = []
+    txs = []
 
     for art in articles:
         analysis = analyze_sentiment(art['headline'], art['summary'])
@@ -102,9 +122,20 @@ for ticker in TICKERS:
             alerts.append(
                 f"{readable_time}\n📰 {art['headline']}\n🤖 AI {analysis}\n🔗 {art['url']}"
             )
+    
+    
+    for tx in insider_txs:
+        msg = f"Name: {tx.get('name')}, Shares: {tx.get('share')}, Change: {tx.get('change')}, Price: {tx.get('transactionPrice')}"
+        txs.append((sort_change_value(tx.get('change')), msg))
+
+    txs.sort(key=lambda item: item[0], reverse=True)
+    txs = [msg for _, msg in txs]
 
     if alerts:
-        alert_msg = f"🚨 {ticker} ALERTS 🚨\n\n" + "\n\n".join(alerts)
+        alert_msg = (
+            f"🚨 {ticker} ALERTS 🚨\n\n" + "\n\n".join(alerts) + 
+            f"\n\n💰 {ticker} INSIDER TRADES 💰\n" + "\n".join(txs)
+        )
         send_telegram(alert_msg)
         print(f"Alert sent for {ticker}!")
 
