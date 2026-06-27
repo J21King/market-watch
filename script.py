@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
@@ -11,27 +12,55 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 # Config - Tickers to be analyzed
-TICKERS = ["MSFT", "AMZN", "AAPL", "GOOGL", "TSLA"]
+TICKERS = ["MSFT", "AMZN", "GOOGL", "TSLA", "AVGO", "NVDA"]
 
-def get_market_news(ticker):
-    # Base URL
-    url = "https://finnhub.io/api/v1/company-news?"
-    
-    query_params = {
-        "symbol": ticker,
-        "from": "2026-06-01",
-        "to": "2026-06-25",
-        "token": FINNHUB_KEY
-    }
-    
-    response = requests.get(url, params=query_params).json()
-    print(f"Successfully fetched news for {ticker}")
-    return response[:3] # Return top 3 latest articles to analyze
+class MarketWatch:
+    TODAY = datetime.now(timezone.utc).date().isoformat()
+    YESTERDAY = (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
 
-def analyze_sentiment(headline):
+    @classmethod
+    def get_market_news(cls, ticker):
+        url = "https://finnhub.io/api/v1/company-news?"
+
+        query_params = {
+            "symbol": ticker,
+            "from": cls.YESTERDAY,
+            "to": cls.TODAY,
+            "token": FINNHUB_KEY
+        }
+
+        try:
+            response = requests.get(url, params=query_params).json()
+        except Exception as e:
+            print(f"Failed to fetch news for {ticker}: {e}")
+            return []
+
+        print(f"Successfully fetched news for {ticker} ({len(response)} items)")
+        return response[:5]  # Return top 5 latest articles to analyze
+
+    @classmethod
+    def get_insider_transactions(cls, ticker):
+        url = f"https://finnhub.io/api/v1/stock/insider-transactions"
+
+        query_params = {
+            "symbol": ticker,
+            "token": FINNHUB_KEY
+        }
+
+        try:
+            response = requests.get(url, params=query_params).json()
+        except Exception as e:
+            print(f"Failed to fetch insider transactions for {ticker}: {e}")
+            return []
+
+        print(f"Successfully fetched insider transactions for {ticker}")
+        return response.get("data", [])[:5]  # Return top 5 latest transactions
+
+
+def analyze_sentiment(headline, summary):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
-    prompt = f"Analyze this market news headline: '{headline}'. Reply ONLY in this exact format: Score: [integer from -5 to 5], Reason: [one short sentence]."
+    prompt = f"Analyze this market news headline: '{headline}' and summary: '{summary}'. Reply ONLY in this exact format: Score: [integer from -5 to 5] - [one short sentence]."
     data = {
         "model": "llama-3.3-70b-versatile",
         "messages": [{"role": "user", "content": prompt}]
@@ -40,15 +69,19 @@ def analyze_sentiment(headline):
         response = requests.post(url, json=data, headers=headers).json()
         return response["choices"][0]["message"]["content"]
     except:
-        return "Score: 0, Reason: Analysis failed."
+        return "Score: 0 - Analysis failed."
+
+
+def format_datetime_pst(timestamp):
+    pst = timezone(timedelta(hours=-8))
+    return datetime.fromtimestamp(timestamp, pst).strftime("%Y-%m-%d %I:%M %p PST")
+
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
         response = requests.post(url=url, data={"chat_id": TELEGRAM_CHAT_ID, "text": message}).json()
-        if response.get("ok"):
-            print("Telegram notification dispatched successfully!")
-        else:
+        if not response.get("ok"):
             print(f"Telegram rejected the message. Error details: {response}")
     except Exception as e:
         print(f"Failed to reach Telegram servers. Network error: {e}")
@@ -56,14 +89,23 @@ def send_telegram(message):
 
 # Main Logic Run
 for ticker in TICKERS:
-    articles = get_market_news(ticker)
+    articles = MarketWatch.get_market_news(ticker)
+    alerts = []
+
     for art in articles:
-        analysis = analyze_sentiment(art['headline'])
-        
+        analysis = analyze_sentiment(art['headline'], art['summary'])
+
         # Check if score is highly impactful (e.g., contains 'Score: 4', 'Score: 5', 'Score: -4', etc.)
         if any(x in analysis for x in ["4", "5", "-4", "-5"]):
-            alert_msg = f"🚨 {ticker} ALERT 🚨\n\n📰 {art['headline']}\n\n🤖 AI {analysis}\n\n🔗 {art['url']}"
-            send_telegram(alert_msg)
-            print(f"Alert sent for {ticker}!")
-            
+            timestamp = art.get('datetime')
+            readable_time = format_datetime_pst(timestamp) if timestamp else 'Unknown time'
+            alerts.append(
+                f"{readable_time}\n📰 {art['headline']}\n🤖 AI {analysis}\n🔗 {art['url']}"
+            )
+
+    if alerts:
+        alert_msg = f"🚨 {ticker} ALERTS 🚨\n\n" + "\n\n".join(alerts)
+        send_telegram(alert_msg)
+        print(f"Alert sent for {ticker}!")
+
 print("Run complete.")
