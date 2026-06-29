@@ -1,11 +1,11 @@
 import os
 import requests
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 
-# load_dotenv()
 
-# # Load secrets from env variables
+### Import dotenv and uncomment this block to load secrets from env variables
+# load_dotenv()
 # FINNHUB_KEY = os.environ["FINNHUB_API_KEY"]
 # GROQ_KEY = os.environ["GROQ_API_KEY"]
 # TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
