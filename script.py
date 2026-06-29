@@ -4,12 +4,12 @@ import requests
 from datetime import datetime, timedelta, timezone
 
 
-### Import dotenv and uncomment this block to load secrets from env variables
+### Uncomment import and load dotenv to load secrets from local env variables
 # load_dotenv()
-# FINNHUB_KEY = os.environ["FINNHUB_API_KEY"]
-# GROQ_KEY = os.environ["GROQ_API_KEY"]
-# TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-# TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+FINNHUB_KEY = os.environ["FINNHUB_API_KEY"]
+GROQ_KEY = os.environ["GROQ_API_KEY"]
+TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 # Config - Tickers to be analyzed
 TICKERS = ["MSFT", "AMZN", "SPCX", "TSLA", "AVGO", "NVDA"]
