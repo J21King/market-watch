@@ -137,11 +137,14 @@ for ticker in TICKERS:
     txs = [msg for _, msg in txs]
 
     if alerts:
+        header_row = f"| {'Name':<20}| {'Shares':<10}| {'Change':<10}| {'Price':<6} |"
+        divider_row = "|---------------------|-----------|-----------|--------|"
+        insider_block = "\n".join([header_row, divider_row, *txs])
         alert_msg = (
             f"🚨 {ticker} ALERTS 🚨\n\n"
             + "\n\n".join(alerts)
             + f"\n\n💰 {ticker} INSIDER TRADES 💰\n"
-            + f"<pre>{'\n'.join([f'| {'Name':<20}| {'Shares':<10}| {'Change':<10}| {'Price':<6} |', '|---------------------|-----------|-----------|--------|', *txs])}</pre>"
+            + f"<pre>{insider_block}</pre>"
         )
         send_telegram(alert_msg)
         print(f"Alert sent for {ticker}!")
