@@ -12,8 +12,7 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 # Config - Tickers to be analyzed
-# TICKERS = ["MSFT", "AMZN", "GOOGL", "TSLA", "AVGO", "NVDA"]
-TICKERS = ["MSFT"]
+TICKERS = ["MSFT", "AMZN", "SPCX", "TSLA", "AVGO", "NVDA"]
 
 class MarketWatch:
     TODAY = datetime.now(timezone.utc).date().isoformat()
@@ -95,7 +94,8 @@ def send_telegram(message):
         "text": message,
         "link_preview_options": {
             "is_disabled": True
-        }
+        },
+        "parse_mode": "HTML"
     }
     try:
         response = requests.post(url=url, json=data).json()
@@ -125,7 +125,12 @@ for ticker in TICKERS:
     
     
     for tx in insider_txs:
-        msg = f"Name: {tx.get('name')}, Shares: {tx.get('share')}, Change: {tx.get('change')}, Price: {tx.get('transactionPrice')}"
+        msg = (
+            f"| {tx.get('name', ''):<20}"
+            f"| {str(tx.get('share', '')):<10}"
+            f"| {str(tx.get('change', '')):<10}"
+            f"| {str(tx.get('transactionPrice', '')):<6} |"
+        )
         txs.append((sort_change_value(tx.get('change')), msg))
 
     txs.sort(key=lambda item: item[0], reverse=True)
@@ -133,8 +138,12 @@ for ticker in TICKERS:
 
     if alerts:
         alert_msg = (
-            f"🚨 {ticker} ALERTS 🚨\n\n" + "\n\n".join(alerts) + 
-            f"\n\n💰 {ticker} INSIDER TRADES 💰\n" + "\n".join(txs)
+            f"🚨 {ticker} ALERTS 🚨\n\n"
+            + "\n\n".join(alerts)
+            + f"\n\n💰 {ticker} INSIDER TRADES 💰\n"
+            + f"<pre>{'\n'.join([f'| {'Name':<20}| {'Shares':<10}| {'Change':<10}| {'Price':<6} |', 
+                                 '|---------------------|-----------|-----------|--------|', 
+                                 *txs])}</pre>"
         )
         send_telegram(alert_msg)
         print(f"Alert sent for {ticker}!")
