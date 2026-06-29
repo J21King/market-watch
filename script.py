@@ -141,9 +141,7 @@ for ticker in TICKERS:
             f"🚨 {ticker} ALERTS 🚨\n\n"
             + "\n\n".join(alerts)
             + f"\n\n💰 {ticker} INSIDER TRADES 💰\n"
-            + f"<pre>{'\n'.join([f'| {'Name':<20}| {'Shares':<10}| {'Change':<10}| {'Price':<6} |', 
-                                 '|---------------------|-----------|-----------|--------|', 
-                                 *txs])}</pre>"
+            + f"<pre>{'\n'.join([f'| {'Name':<20}| {'Shares':<10}| {'Change':<10}| {'Price':<6} |', '|---------------------|-----------|-----------|--------|', *txs])}</pre>"
         )
         send_telegram(alert_msg)
         print(f"Alert sent for {ticker}!")
