@@ -12,7 +12,8 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 # Config - Tickers to be analyzed
-TICKERS = ["MSFT", "AMZN", "SPCX", "TSLA", "AVGO", "NVDA"]
+# TICKERS = ["MSFT", "AMZN", "SPCX", "TSLA", "AVGO", "NVDA"]
+TICKERS = ["MSFT"]
 
 class MarketWatch:
     TODAY = datetime.now(timezone.utc).date().isoformat()
@@ -44,8 +45,7 @@ class MarketWatch:
 
         query_params = {
             "symbol": ticker,
-            # "from": cls.YESTERDAY,
-            "from": "2026-06-10",  # Fetch from the start of the year for more data
+            "from": cls.YESTERDAY,
             "to": cls.TODAY,
             "token": FINNHUB_KEY
         }
@@ -87,6 +87,16 @@ def sort_change_value(value):
         return float("-inf")
 
 
+def format_table_cell(value, width, align='left'):
+    text = str(value or '')
+    if len(text) > width:
+        text = text[:width - 1] + '…'
+    pad_char = ' '  # preserve monospace alignment in <pre>
+    if align == 'right':
+        return text.rjust(width, pad_char)
+    return text.ljust(width, pad_char)
+
+
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {
@@ -109,6 +119,10 @@ def send_telegram(message):
 for ticker in TICKERS:
     articles = MarketWatch.get_market_news(ticker)
     insider_txs = MarketWatch.get_insider_transactions(ticker)
+    name_column_width = 15  # Fixed width for the name column in the insider transactions table
+    share_column_width = 10  # Fixed width for the shares column
+    change_column_width = 10  # Fixed width for the change column
+    price_column_width = 8  # Fixed width for the price column
     alerts = []
     txs = []
 
@@ -125,11 +139,12 @@ for ticker in TICKERS:
     
     
     for tx in insider_txs:
+        name = tx.get('name', '') or ''
         msg = (
-            f"| {tx.get('name', ''):<20}"
-            f"| {str(tx.get('share', '')):<10}"
-            f"| {str(tx.get('change', '')):<10}"
-            f"| {str(tx.get('transactionPrice', '')):<6} |"
+            "|" + format_table_cell(name, name_column_width)
+            + "|" + format_table_cell(tx.get('share', ''), share_column_width, align='right')
+            + "|" + format_table_cell(tx.get('change', ''), change_column_width, align='right')
+            + "|" + format_table_cell(tx.get('transactionPrice', ''), price_column_width, align='right') + "|"
         )
         txs.append((sort_change_value(tx.get('change')), msg))
 
@@ -137,8 +152,18 @@ for ticker in TICKERS:
     txs = [msg for _, msg in txs]
 
     if alerts:
-        header_row = f"| {'Name':<20}| {'Shares':<10}| {'Change':<10}| {'Price':<6} |"
-        divider_row = "|---------------------|-----------|-----------|--------|"
+        header_row = (
+            "|" + format_table_cell('Name', name_column_width)
+            + "|" + format_table_cell('Shares', share_column_width)
+            + "|" + format_table_cell('Change', change_column_width)
+            + "|" + format_table_cell('Price', price_column_width) + "|"
+        )
+        divider_row = (
+            "|" + '-' * name_column_width
+            + "|" + '-' * share_column_width
+            + "|" + '-' * change_column_width
+            + "|" + '-' * price_column_width + "|"
+        )
         insider_block = "\n".join([header_row, divider_row, *txs])
         alert_msg = (
             f"🚨 {ticker} ALERTS 🚨\n\n"
