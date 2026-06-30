@@ -12,8 +12,7 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 # Config - Tickers to be analyzed
-# TICKERS = ["MSFT", "AMZN", "SPCX", "TSLA", "AVGO", "NVDA"]
-TICKERS = ["MSFT"]
+TICKERS = [ticker.strip() for ticker in os.environ.get("TICKERS").split(",") if ticker.strip()]
 
 class MarketWatch:
     TODAY = datetime.now(timezone.utc).date().isoformat()
