@@ -70,7 +70,7 @@ def analyze_sentiment(headline, summary):
     try:
         response = requests.post(url, json=data, headers=headers).json()
         if "error" in response:
-            print(f"Groq rejected the request: {response["error"]}")
+            print(f"Groq rejected the request: {response['error']}")
         return response["choices"][0]["message"]["content"]
     except Exception as e:
         print(f"Failed to analyze sentiment: {e}")
