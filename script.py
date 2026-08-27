@@ -64,13 +64,16 @@ def analyze_sentiment(headline, summary):
     headers = {"Authorization": f"Bearer {GROQ_KEY}", "Content-Type": "application/json"}
     prompt = f"Analyze this market news headline: '{headline}' and summary: '{summary}'. Reply ONLY in this exact format: Score: [integer from -5 to 5] - [one short sentence]."
     data = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "openai/gpt-oss-120b",
         "messages": [{"role": "user", "content": prompt}]
     }
     try:
         response = requests.post(url, json=data, headers=headers).json()
+        if "error" in response:
+            print(f"Groq rejected the request: {response["error"]}")
         return response["choices"][0]["message"]["content"]
-    except:
+    except Exception as e:
+        print(f"Failed to analyze sentiment: {e}")
         return "Score: 0 - Analysis failed."
 
 
@@ -129,7 +132,7 @@ for ticker in TICKERS:
         analysis = analyze_sentiment(art['headline'], art['summary'])
 
         # Check if score is highly impactful (e.g., contains 'Score: 4', 'Score: 5', 'Score: -4', etc.)
-        if any(x in analysis for x in ["4", "5", "-4", "-5"]):
+        if any(x in analysis for x in ["4", "5", "-3", "-4", "-5"]):
             timestamp = art.get('datetime')
             readable_time = format_datetime_pst(timestamp) if timestamp else 'Unknown time'
             alerts.append(
@@ -150,7 +153,7 @@ for ticker in TICKERS:
     txs.sort(key=lambda item: item[0], reverse=True)
     txs = [msg for _, msg in txs]
 
-    if alerts:
+    if alerts or txs:
         header_row = (
             "|" + format_table_cell('Name', name_column_width)
             + "|" + format_table_cell('Shares', share_column_width)

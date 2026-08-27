@@ -3,7 +3,7 @@ name: Run Stock News AI Tracker
 on:
   schedule:
     # Runs at 7:00 AM and 4:00 PM UTC
-    - cron: '0 7,16 * * *'
+    - cron: '0 7 * * *' 
   workflow_dispatch: # Allows you to run it manually via the GitHub dashboard button
 
 jobs:
